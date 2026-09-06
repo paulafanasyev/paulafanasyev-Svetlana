@@ -2,33 +2,45 @@
 
 ## Decision
 
-A new clean repository `paulafanasyev/paulafanasyev-Svetlana` is now the experimental integration target. OX2/Hands is frozen and is not being modified by this migration.
+The project direction has been simplified: **Aster-first**. The working Aster Android agent is the technical base for Svetlana. MobileAgent and Sanna are deferred and are NOT runtime dependencies of the first Svetlana build. OX2/Hands remains frozen and separate.
 
-## Evidence from upstream projects
+## Upstream evidence
 
-- MobileAgent-Android: Android-native vision agent with Manager/Executor/Reflector/Notetaker, Accessibility-based UI detection/actions, minSdk 26, Kotlin 1.9, Compose, and no PC/ADB requirement.
-- Sanna: Android voice-first assistant using React Native + native Kotlin, Accessibility automation, multi-step agent loop, local storage and scheduler; MIT license.
-- Aster: Android Accessibility execution/tool layer with MCP, local on-device MCP mode and Binder IPC; MIT license; Android minSdk 26, JDK 17, compileSdk 36; 49 tools and explicit safety controls including kill switch and PackagePolicyGuard.
+- Aster: Android Accessibility execution/tool layer with MCP, local on-device MCP mode and Binder IPC; MIT license; minSdk 26, JDK 17, compileSdk 36; 49 tools; kill switch and PackagePolicyGuard.
+- MobileAgent-Android: vision/planning candidate only for a later phase.
+- Sanna: voice/agent-loop candidate only for a later phase.
 
-## Initial architecture
+## Product rule
 
-Svetlana UI/voice → agent core → MobileAgent planning/vision → Aster execution/tools. Sanna is treated as a candidate source for voice/agent-loop capabilities; duplicate automation layers must not be blindly merged.
+We are not replacing Aster's working voice stack. **Existing Aster voice is frozen and preserved unchanged.** We also preserve Accessibility, execution, MCP/Binder, tools and security until runtime evidence proves a reason to change them.
 
-## Changes made in this migration
+## Changes made
 
-1. Created the new clean repository target.
-2. Added `README.md` defining the project direction.
-3. Added `docs/ARCHITECTURE.md` with the initial integration boundary.
-4. Added this handoff report.
+1. `README.md` changed to the Aster-first strategy.
+2. Added `.github/workflows/import-aster.yml`.
+3. The workflow automatically clones the upstream Aster repository into `paulafanasyev-Svetlana`, preserving the Svetlana docs, and sets the Android application label to `Светлана` without rewriting internal Aster identifiers during the first import.
+4. Added the migration contract in `docs/ASTER-IMPORT.md` during the import job.
 
-## Not done / not claimed
+## Current execution state
 
-- No source code from the three upstream repositories has been copied into the app yet.
-- No APK build has been claimed.
-- No runtime PASS has been claimed.
-- No OX2/Hands code has been changed as part of this migration.
+The import workflow was committed at:
+
+`66079872755a965fcb45f92a6572cd1cc291450c`
+
+The workflow is designed to create the actual Aster source import commit on `main`. At the moment of this report, the GitHub workflow-run query has not yet returned a run for that commit, so the import itself is **NOT YET CLAIMED COMPLETE**.
+
+## Not claimed
+
+- No APK build PASS.
+- No runtime PASS.
+- No claim that Russian localization is complete yet.
+- No package-identifier rename yet; internal Aster identifiers are intentionally preserved for the first stable import.
+- No OX2/Hands changes.
 - Azure has not been restored.
 
 ## Next evidence gate
 
-Perform source-level compatibility audit of the three repositories, identify overlapping Android control/agent/voice layers, choose exact revisions, then create the minimal buildable Android skeleton before any broad transplant.
+1. Confirm the import workflow completed and inspect the resulting tree.
+2. Build the imported Aster app.
+3. Verify the existing voice stack and Accessibility control before changing internals.
+4. Then perform Russian user-facing localization without destabilizing the working execution/voice stack.
