@@ -1,15 +1,28 @@
 # Светлана
 
-Новый Android-проект ассистента Светлана.
+Clean fork of the working Aster Android agent, adapted for Russian users.
 
-## Архитектурное направление
+## Current strategy
 
-- MobileAgent — vision-driven agent loop и планирование действий.
-- Sanna — voice-first agent loop и голосовое взаимодействие.
-- Aster — Android tool/execution layer.
+Aster is the technical base. We preserve its working voice, Accessibility control, MCP/Binder execution, tools, and security model. We are **not** adding Sanna or MobileAgent to the runtime at this stage.
 
-OX2/Hands не является частью нового проекта на старте. OX2 сохраняется отдельно как резервная ветка разработки.
+### First milestone
 
-## Правило проекта
+- Aster source copied into this repository
+- Product name: **Светлана**
+- Russian UI and user-facing strings
+- Russian assistant persona/system instructions
+- Existing Aster voice stack kept unchanged
+- Existing Accessibility/execution stack kept unchanged
+- Existing security controls kept unchanged
+- OX2/Hands remains frozen and separate
 
-Сначала доказать совместимость и минимальный end-to-end путь, затем переносить код. Не переносить зависимости вслепую.
+## Evidence rule
+
+A source change is not a build PASS. We only call the project working after an actual build and runtime verification produce evidence.
+
+## Upstream
+
+Aster: `satyajiit/aster-mcp`
+
+Sanna and MobileAgent are deferred integration candidates, not dependencies of the first Svetlana build.
