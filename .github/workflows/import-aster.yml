@@ -3,8 +3,6 @@ name: Import Aster as Svetlana
 on:
   push:
     branches: [main]
-  pull_request:
-    types: [opened, synchronize]
   workflow_dispatch:
 
 permissions:
@@ -12,7 +10,6 @@ permissions:
 
 jobs:
   import-aster:
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push' || github.event.pull_request.base.ref == 'main'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout main
@@ -20,72 +17,73 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
+          persist-credentials: true
 
-      - name: Check whether import is already present
-        id: gate
-        shell: bash
-        run: |
-          if [[ -f docs/ASTER-IMPORT.md ]]; then
-            echo 'needed=false' >> "$GITHUB_OUTPUT"
-          else
-            echo 'needed=true' >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Import Aster source
-        if: steps.gate.outputs.needed == 'true'
+      - name: Import Aster source when Android base is absent
         shell: bash
         run: |
           set -euo pipefail
+          if [[ -f apps/android/app/build.gradle.kts ]]; then
+            echo "Aster Android base already present; nothing to import."
+            exit 0
+          fi
+
           rm -rf .aster-import
           git clone --depth 1 https://github.com/satyajiit/aster-mcp.git .aster-import
-          find .aster-import -mindepth 1 -maxdepth 1 ! -name .git ! -name README.md -exec cp -a {} . \;
+
+          # Runtime/product base: keep the complete Android app plus its MCP/tooling trees.
+          cp -a .aster-import/apps .
+          cp -a .aster-import/mcp .
+          if [[ -d .aster-import/packages ]]; then cp -a .aster-import/packages .; fi
+          if [[ -d .aster-import/skill ]]; then cp -a .aster-import/skill .; fi
+          if [[ -d .aster-import/assets ]]; then cp -a .aster-import/assets .; fi
+
+          # Preserve this repository's own README/docs/workflows.
           rm -rf .aster-import
 
-      - name: Set Svetlana product name without touching execution/voice internals
-        if: steps.gate.outputs.needed == 'true'
+      - name: Set Svetlana product name
         shell: bash
         run: |
           set -euo pipefail
           manifest='apps/android/app/src/main/AndroidManifest.xml'
-          if [[ -f "$manifest" ]]; then
-            sed -i 's/android:label="[^"]*"/android:label="Светлана"/' "$manifest" || true
-          fi
+          test -f "$manifest"
+          sed -i 's/android:label="[^"]*"/android:label="Светлана"/' "$manifest"
+
           mkdir -p docs
           cat > docs/ASTER-IMPORT.md <<'EOF'
 # Aster → Светлана
 
-This repository now uses the upstream Aster Android source as its technical base.
+Aster is the complete technical baseline for the Svetlana Android agent.
 
-## Frozen components
+## Baseline policy
 
-- Existing Aster voice stack: unchanged.
-- Accessibility/execution layer: unchanged.
-- MCP/Binder/tooling: unchanged.
-- Security controls: unchanged.
-- OX2/Hands: separate and frozen.
+- All working Aster functionality is retained, including its existing voice implementation.
+- Accessibility, execution, MCP, Binder IPC, tools, OCR/UI hierarchy, notifications, SMS, calls, files, media, camera, clipboard, location, alarms, scheduler, storage, settings, and security controls remain in scope.
+- No Azure voice stack is introduced.
+- MobileAgent/Sanna are not runtime dependencies of this baseline.
+- OX2/Hands remains separate and frozen.
+- Internal Aster package/protocol identifiers are preserved initially to avoid destabilizing a working runtime.
 
 ## Product adaptation
 
-- Application name: Светлана.
-- Russian localization/persona is applied only at the user-facing layer.
-- Internal Aster protocol/package identifiers are intentionally preserved during the first import so the working runtime is not destabilized.
+- Android application label: Светлана.
+- Russian user-facing localization/persona is the next adaptation layer, after the imported baseline builds successfully.
 
 ## Evidence gate
 
-Importing source is NOT a build/runtime PASS. The next step is an actual Android build followed by runtime verification.
+Source import is not itself a build/runtime PASS. CI must prove compilation, APK generation, installation, and runtime behavior.
 EOF
 
-      - name: Commit imported source to main
-        if: steps.gate.outputs.needed == 'true'
+      - name: Commit imported source
         shell: bash
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
+          git add apps mcp packages skill assets docs/ASTER-IMPORT.md
           if git diff --cached --quiet; then
             echo 'No import changes.'
             exit 0
           fi
-          git commit -m 'feat: import working Aster base as Svetlana'
+          git commit -m 'feat: import complete Aster Android base as Svetlana'
           git push origin HEAD:main
