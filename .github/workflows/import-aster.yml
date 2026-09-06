@@ -3,8 +3,6 @@ name: Import Aster as Svetlana
 on:
   push:
     branches: [main]
-    paths:
-      - '.github/workflows/import-aster.yml'
   workflow_dispatch:
 
 permissions:
@@ -12,6 +10,7 @@ permissions:
 
 jobs:
   import-aster:
+    if: ${{ !contains(github.event.head_commit.message, 'feat: import working Aster base as Svetlana') && !hashFiles('docs/ASTER-IMPORT.md') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Svetlana
@@ -25,8 +24,6 @@ jobs:
           set -euo pipefail
           rm -rf .aster-import
           git clone --depth 1 https://github.com/satyajiit/aster-mcp.git .aster-import
-
-          # Preserve this repository's control/docs while importing the working Aster tree.
           find .aster-import -mindepth 1 -maxdepth 1 ! -name .git ! -name README.md -exec cp -a {} . \;
           rm -rf .aster-import
 
@@ -38,7 +35,6 @@ jobs:
           if [[ -f "$manifest" ]]; then
             sed -i 's/android:label="[^"]*"/android:label="Светлана"/' "$manifest" || true
           fi
-
           mkdir -p docs
           cat > docs/ASTER-IMPORT.md <<'EOF'
 # Aster → Светлана
