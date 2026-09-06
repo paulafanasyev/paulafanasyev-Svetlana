@@ -1,0 +1,79 @@
+name: Import Aster as Svetlana
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/import-aster.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import-aster:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Svetlana
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Import Aster source
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .aster-import
+          git clone --depth 1 https://github.com/satyajiit/aster-mcp.git .aster-import
+
+          # Preserve this repository's control/docs while importing the working Aster tree.
+          find .aster-import -mindepth 1 -maxdepth 1 ! -name .git ! -name README.md -exec cp -a {} . \;
+          rm -rf .aster-import
+
+      - name: Set Svetlana product name without touching execution/voice internals
+        shell: bash
+        run: |
+          set -euo pipefail
+          manifest='apps/android/app/src/main/AndroidManifest.xml'
+          if [[ -f "$manifest" ]]; then
+            sed -i 's/android:label="[^"]*"/android:label="Светлана"/' "$manifest" || true
+          fi
+
+          mkdir -p docs
+          cat > docs/ASTER-IMPORT.md <<'EOF'
+# Aster → Светлана
+
+This repository now uses the upstream Aster Android source as its technical base.
+
+## Frozen components
+
+- Existing Aster voice stack: unchanged.
+- Accessibility/execution layer: unchanged.
+- MCP/Binder/tooling: unchanged.
+- Security controls: unchanged.
+- OX2/Hands: separate and frozen.
+
+## Product adaptation
+
+- Application name: Светлана.
+- Russian localization/persona is applied only at the user-facing layer.
+- Internal Aster protocol/package identifiers are intentionally preserved during the first import so the working runtime is not destabilized.
+
+## Evidence gate
+
+Importing source is NOT a build/runtime PASS. The next step is an actual Android build followed by runtime verification.
+EOF
+
+      - name: Commit imported source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'No import changes.'
+            exit 0
+          fi
+          git commit -m 'feat: import working Aster base as Svetlana'
+          git push origin HEAD:main
