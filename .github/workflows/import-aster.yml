@@ -3,6 +3,8 @@ name: Import Aster as Svetlana
 on:
   push:
     branches: [main]
+  pull_request:
+    types: [opened, synchronize]
   workflow_dispatch:
 
 permissions:
@@ -10,18 +12,20 @@ permissions:
 
 jobs:
   import-aster:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push' || github.event.pull_request.base.ref == 'main'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Svetlana
+      - name: Checkout main
         uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
 
       - name: Check whether import is already present
         id: gate
         shell: bash
         run: |
-          if [[ -f docs/ASTER-IMPORT.md ]] || [[ "${{ github.event.head_commit.message }}" == *"feat: import working Aster base as Svetlana"* ]]; then
+          if [[ -f docs/ASTER-IMPORT.md ]]; then
             echo 'needed=false' >> "$GITHUB_OUTPUT"
           else
             echo 'needed=true' >> "$GITHUB_OUTPUT"
@@ -71,7 +75,7 @@ This repository now uses the upstream Aster Android source as its technical base
 Importing source is NOT a build/runtime PASS. The next step is an actual Android build followed by runtime verification.
 EOF
 
-      - name: Commit imported source
+      - name: Commit imported source to main
         if: steps.gate.outputs.needed == 'true'
         shell: bash
         run: |
